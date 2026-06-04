@@ -77,6 +77,7 @@ export class EdgeTtsProvider implements TtsProvider {
 export function createTtsProvider(provider: string): TtsProvider {
   switch (provider) {
     case 'edge':
+      return new EdgeTtsProvider();
     default:
       return new EdgeTtsProvider();
   }

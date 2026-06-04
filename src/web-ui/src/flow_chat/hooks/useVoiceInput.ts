@@ -25,7 +25,7 @@ interface VoiceSettings {
 
 function loadVoiceConfig(): VoiceSettings {
   const stored = configManager.getConfig<VoiceSettings>('voice');
-return {
+  return {
     sttEnabled: true,
     ttsEnabled: true,
     sttProvider: 'webspeech',
@@ -57,7 +57,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const interimTranscriptRef = useRef('');
 
@@ -65,18 +65,18 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const win = window as any;
     const SpeechRecognition = win.SpeechRecognition || win.webkitSpeechRecognition;
-    
+
     if (SpeechRecognition) {
       setIsSupported(true);
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = language;
-      
+
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         let finalTranscript = '';
         let interimTranscript = '';
-        
+
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           if (result.isFinal) {
@@ -85,19 +85,19 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
             interimTranscript += result[0].transcript;
           }
         }
-        
+
         interimTranscriptRef.current = interimTranscript;
-        
+
         if (interimTranscript) {
           onInterimResult?.(interimTranscript);
         }
-        
+
         if (finalTranscript) {
           log.debug('Speech recognized:', { finalTranscript });
           onResult?.(finalTranscript);
         }
       };
-      
+
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         log.warn('Speech recognition error:', { error: event.error });
         if (event.error !== 'no-speech' && event.error !== 'aborted') {
@@ -105,23 +105,23 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
         }
         setIsListening(false);
       };
-      
+
       recognition.onend = () => {
         setIsListening(false);
         interimTranscriptRef.current = '';
       };
-      
+
       recognition.onstart = () => {
         setIsListening(true);
         setError(null);
       };
-      
+
       recognitionRef.current = recognition;
     } else {
       setIsSupported(false);
       log.warn('Speech recognition not supported');
     }
-    
+
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.abort();
@@ -133,7 +133,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
     const cfg = loadVoiceConfig();
     if (!cfg.sttEnabled) return;
     if (!recognitionRef.current || isListening) return;
-    
+
     try {
       interimTranscriptRef.current = '';
       recognitionRef.current.lang = language;
@@ -146,7 +146,7 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current || !isListening) return;
-    
+
     try {
       recognitionRef.current.stop();
     } catch (err) {
@@ -179,16 +179,16 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
 export function useVoiceInputToChat(options: UseVoiceInputOptions = {}) {
   const { onResult } = options;
   const [interimText, setInterimText] = useState('');
-  
+
   const handleResult = useCallback((text: string) => {
     setInterimText('');
-    
+
     globalEventBus.emit('fill-chat-input', {
       content: text,
       mode: 'append',
       separator: ' ',
     });
-    
+
     onResult?.(text);
   }, [onResult]);
 
