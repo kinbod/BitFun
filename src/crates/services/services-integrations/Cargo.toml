@@ -64,6 +64,7 @@ mcp = [
 ]
 remote-connect = ["async-trait", "base64", "bitfun-runtime-ports", "uuid"]
 remote-ssh = ["dunce", "sha2", "tokio-util"]
+voice = ["async-trait", "bitfun-runtime-ports", "futures"]
 product-full = [
     "announcement",
     "file-watch",
@@ -72,4 +73,5 @@ product-full = [
     "mcp",
     "remote-connect",
     "remote-ssh",
+    "voice",
 ]
