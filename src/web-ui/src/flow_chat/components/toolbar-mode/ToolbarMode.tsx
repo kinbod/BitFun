@@ -10,11 +10,11 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { 
-  MessageSquare, 
-  Square, 
-  Check, 
-  X, 
+import {
+  MessageSquare,
+  Square,
+  Check,
+  X,
   ArrowUp,
   Maximize2,
   MoreVertical,
@@ -30,6 +30,9 @@ import { compareSessionsForDisplay } from '../../utils/sessionOrdering';
 import { createLogger } from '@/shared/utils/logger';
 import { i18nService } from '@/infrastructure/i18n';
 import { resolveSessionTitle } from '../../utils/sessionTitle';
+import { aiExperienceConfigService } from '@/infrastructure/config/services/AIExperienceConfigService';
+import { type ChatInputPetMood } from '../../utils/chatInputPetMood';
+import { ChatInputPixelPet } from '../ChatInputPixelPet';
 
 const log = createLogger('ToolbarMode');
 import { ModernFlowChatContainer } from '../modern/ModernFlowChatContainer';
@@ -57,6 +60,27 @@ export const ToolbarMode: React.FC = () => {
   );
   const sessionPickerRef = useRef<HTMLDivElement>(null);
   const headerOverflowRef = useRef<HTMLDivElement>(null);
+
+  const [companionSettings, setCompanionSettings] = useState(() =>
+    aiExperienceConfigService.getSettings()
+  );
+
+  useEffect(() => {
+    void aiExperienceConfigService.getSettingsAsync().then(setCompanionSettings);
+  }, []);
+
+  const companionMood = useMemo((): ChatInputPetMood => {
+    if (!toolbarState.isProcessing) return 'rest';
+    if (toolbarState.latestToolName) return 'waiting';
+    return 'working';
+  }, [toolbarState.isProcessing, toolbarState.latestToolName]);
+
+  const showCompanionPet = useMemo(() =>
+    companionSettings.enable_agent_companion &&
+    companionSettings.agent_companion_display_mode === 'input' &&
+    companionSettings.agent_companion_pet,
+    [companionSettings]
+  );
 
   useEffect(() => {
     const unsubscribe = flowChatStore.subscribe((state) => {
@@ -590,7 +614,17 @@ export const ToolbarMode: React.FC = () => {
                   </span>
                 )}
               </div>
-              
+
+              {showCompanionPet && (
+                <div className="bitfun-toolbar-mode__companion-pet" onClick={toggleExpanded}>
+                  <ChatInputPixelPet
+                    mood={companionMood}
+                    pet={companionSettings.agent_companion_pet}
+                    className="bitfun-toolbar-mode__companion-pet-element"
+                  />
+                </div>
+              )}
+
               <div className="bitfun-toolbar-mode__controls">
                 {toolbarState.hasPendingConfirmation && (
                   <>

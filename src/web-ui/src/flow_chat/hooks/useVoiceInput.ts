@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { globalEventBus } from '@/infrastructure/event-bus';
+import { configManager } from '@/infrastructure/config/services/ConfigManager';
 import { createLogger } from '@/shared/utils/logger';
 import type {
   SpeechRecognitionEvent,
@@ -13,12 +14,34 @@ import type {
 
 const log = createLogger('VoiceInput');
 
+interface VoiceSettings {
+  sttEnabled: boolean;
+  ttsEnabled: boolean;
+  sttProvider: 'webspeech' | 'faster-whisper';
+  ttsProvider: 'edge' | 'elevenlabs';
+  ttsVoice: string;
+  language: string;
+}
+
+function loadVoiceConfig(): VoiceSettings {
+  const stored = configManager.getConfig<VoiceSettings>('voice');
+return {
+    sttEnabled: true,
+    ttsEnabled: true,
+    sttProvider: 'webspeech',
+    ttsProvider: 'edge',
+    ttsVoice: 'zh-CN-XiaoxiaoNeural',
+    language: 'zh-CN',
+    ...stored,
+  };
+}
+
 interface UseVoiceInputOptions {
   /** Callback when speech is recognized (returns final text) */
   onResult?: (text: string) => void;
   /** Callback for interim results */
   onInterimResult?: (text: string) => void;
-  /** Language BCP-47 tag, defaults to zh-CN */
+  /** Language BCP-47 tag, defaults to system config */
   language?: string;
 }
 
@@ -26,8 +49,11 @@ interface UseVoiceInputOptions {
 type SpeechRecognition = any;
 
 export function useVoiceInput(options: UseVoiceInputOptions = {}) {
-  const { onResult, onInterimResult, language = 'zh-CN' } = options;
-  
+  const { onResult, onInterimResult } = options;
+
+  const cfg = loadVoiceConfig();
+  const language = options.language ?? cfg.language ?? 'en-US';
+
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +130,8 @@ export function useVoiceInput(options: UseVoiceInputOptions = {}) {
   }, [language, onResult, onInterimResult]);
 
   const startListening = useCallback(() => {
+    const cfg = loadVoiceConfig();
+    if (!cfg.sttEnabled) return;
     if (!recognitionRef.current || isListening) return;
     
     try {

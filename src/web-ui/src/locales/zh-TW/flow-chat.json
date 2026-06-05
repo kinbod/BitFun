@@ -2088,5 +2088,10 @@
   },
   "actions": {
     "send": "傳送"
+  },
+  "voice": {
+    "stopSpeaking": "停止播報",
+    "startListening": "開始語音輸入",
+    "stopListening": "停止語音輸入"
   }
 }
