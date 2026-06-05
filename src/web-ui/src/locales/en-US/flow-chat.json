@@ -1042,6 +1042,10 @@
     "backgroundCommandStopFailed": "Failed to stop background command.",
     "pullRequests": "Pull requests"
   },
+  "voice": {
+    "stopSpeaking": "Stop speaking",
+    "startListening": "Start voice input",
+    "stopListening": "Stop voice input"
   "backgroundCommandInput": {
     "title": "Send command input",
     "commandLabel": "Command",

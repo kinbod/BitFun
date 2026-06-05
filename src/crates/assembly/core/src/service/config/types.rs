@@ -70,6 +70,9 @@ pub struct GlobalConfig {
     /// Web UI font size preferences (`get_config` / `set_config` path `font`).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font: Option<FontPreferenceSnapshot>,
+    /// Voice (STT/TTS) configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice: Option<VoiceConfig>,
     pub version: String,
     #[serde(with = "chrono::serde::ts_milliseconds")]
     pub last_modified: chrono::DateTime<chrono::Utc>,
@@ -546,8 +549,8 @@ pub struct VoiceConfig {
 impl Default for VoiceConfig {
     fn default() -> Self {
         Self {
-            stt_enabled: false,
-            tts_enabled: false,
+            stt_enabled: true,
+            tts_enabled: true,
             stt_provider: "webspeech".to_string(),
             tts_provider: "edge".to_string(),
             language: "zh-CN".to_string(),
@@ -1325,6 +1328,7 @@ impl Default for GlobalConfig {
             acp_clients: None,
             themes: Some(ThemesConfig::default()),
             font: None,
+            voice: Some(VoiceConfig::default()),
             version: "1.0.0".to_string(),
             last_modified: chrono::Utc::now(),
         }
