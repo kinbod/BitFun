@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Bot, ChevronDown, ChevronUp, GitPullRequest, List, Search, X } from 'lucide-react';
+import { Bot, ChevronDown, ChevronUp, GitPullRequest, List, Search, VolumeX, X } from 'lucide-react';
 import { Tooltip, IconButton, Input } from '@/component-library';
 import { useTranslation } from 'react-i18next';
 import { SessionFilesBadge } from './SessionFilesBadge';
@@ -72,6 +72,10 @@ export interface FlowChatHeaderProps {
   backgroundSubagents?: FlowChatHeaderSubagentSummary[];
   /** Open a background subagent in the right-side panel. */
   onOpenBackgroundSubagent?: (sessionId: string) => void;
+  /** Called when user clicks to stop TTS playback. */
+  onStopSpeaking?: () => void;
+  /** Whether TTS is currently speaking. */
+  isSpeaking?: boolean;
 }
 export const FlowChatHeader: React.FC<FlowChatHeaderProps> = ({
   currentTurn,
@@ -96,6 +100,8 @@ export const FlowChatHeader: React.FC<FlowChatHeaderProps> = ({
   searchOpenRequest = 0,
   backgroundSubagents = [],
   onOpenBackgroundSubagent,
+  isSpeaking = false,
+  onStopSpeaking,
 }) => {
   const { t } = useTranslation('flow-chat');
   const { currentWorkspace } = useWorkspaceContext();
@@ -383,6 +389,21 @@ export const FlowChatHeader: React.FC<FlowChatHeaderProps> = ({
         >
           <GitPullRequest size={14} />
         </IconButton>
+        {isSpeaking && (
+          <Tooltip content={t('voice.stopSpeaking')}>
+            <IconButton
+              className="flowchat-header__tts-btn flowchat-header__tts-btn--speaking"
+              variant="ghost"
+              size="xs"
+              onClick={onStopSpeaking}
+              tooltip={t('voice.stopSpeaking')}
+              aria-label={t('voice.stopSpeaking')}
+              data-testid="flowchat-header-tts-stop"
+            >
+              <VolumeX size={14} />
+            </IconButton>
+          </Tooltip>
+        )}
         {isSearchOpen ? (
           <div className="flowchat-header__search" role="search" data-testid="flowchat-header-search-bar">
             <Input

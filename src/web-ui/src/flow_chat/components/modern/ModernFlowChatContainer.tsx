@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useShortcut } from '@/infrastructure/hooks/useShortcut';
 import { FlowChatManager } from '@/flow_chat/services/FlowChatManager';
 import { useSessionModeStore } from '@/app/stores/sessionModeStore';
+import { useTtsPlayback } from '@/flow_chat/hooks/useTtsPlayback';
 import { VirtualMessageList, VirtualMessageListRef } from './VirtualMessageList';
 import { FlowChatHeader, type FlowChatHeaderTurnSummary } from './FlowChatHeader';
 import { WelcomePanel } from '../WelcomePanel';
@@ -214,6 +215,7 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
     onCollapseGroup: handleCollapseGroup,
   } = useExploreGroupState(virtualItems);
   const { handleToolConfirm, handleToolReject } = useFlowChatToolActions();
+  const { isSpeaking: isTtsSpeaking, currentTextItemId: speakingTextItemId, stop: stopTts } = useTtsPlayback();
 
   const { handleFileViewRequest } = useFlowChatFileActions({
     workspacePath,
@@ -283,6 +285,7 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
     searchQuery,
     searchMatchIndices,
     searchCurrentMatchVirtualIndex,
+    speakingTextItemId,
   }), [
     handleFileViewRequest,
     onTabOpen,
@@ -302,6 +305,7 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
     searchQuery,
     searchMatchIndices,
     searchCurrentMatchVirtualIndex,
+    speakingTextItemId,
   ]);
 
   const resolveLocalCommandHeaderTitle = useCallback((metadata: DialogTurn['userMessage']['metadata']) => {
@@ -845,6 +849,8 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
           searchOpenRequest={searchOpenRequest}
           backgroundSubagents={backgroundSubagents}
           onOpenBackgroundSubagent={handleOpenBackgroundSubagent}
+          isSpeaking={isTtsSpeaking}
+          onStopSpeaking={stopTts}
         />
 
         <div

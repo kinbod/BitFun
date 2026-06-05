@@ -1014,46 +1014,10 @@
     "subagentStatusFinishing": "Finishing",
     "pullRequests": "Pull requests"
   },
-  "stickyTaskIndicator": {
-    "tooltip": "Jump to current task"
-  },
-  "sessionFilesBadge": {
-    "files": "files",
-    "filesSummaryCount": "{{count}} files",
-    "expandChangeListCue": "Expand list",
-    "expandChangeListAriaCue": "Expand to show files",
-    "collapseFileDiffList": "Collapse file change list",
-    "reviewLabel": "Review",
-    "reviewAll": "Review All",
-    "reviewMenuLabel": "Review",
-    "reviewMenuHint": "Choose review depth",
-    "actionsMenuHint": "Quick actions",
-    "actionsButton": "Actions",
-    "actionsButtonRunning": "Busy…",
-    "reviewModeStandard": "Standard review",
-    "reviewModeDeep": "Deep review",
-    "reviewRunningStandard": "Review in progress",
-    "reviewRunningDeep": "Review in progress",
-    "reviewRunningHint": "Wait for the current review to finish or stop it from the review page.",
-    "deepReviewLabel": "Deep",
-    "deepReviewAll": "Deep Review",
-    "loadFailed": "Load failed",
-    "clickToViewDiff": "Click to view diff",
-    "review": {
-      "displayMessage": "Review modified files:\n{{files}}",
-      "displayMessageFiltered": "Review filtered files:\n{{files}}\n\nSkipped {{skipped}} excluded files.",
-      "filteredNotice": "Review will analyze {{included}} files and skip {{skipped}} excluded files such as lock, generated, or binary assets.",
-      "noEligibleFiles": "No reviewable files remain after excluded files were filtered out.",
-      "prompt": "Please review the following files modified in this session:\n\n{{files}}",
-      "promptFiltered": "Please review the following modified files in this session:\n\n{{files}}\n\nDo not review the {{skipped}} skipped files because they matched the excluded lock, generated, or binary file rules.",
-      "threadTitle": "Code review"
-    },
-    "deepReview": {
-      "info": "Deep review launches a parallel code review team. It may take longer and use noticeably more tokens.",
-      "displayMessage": "Deep review modified files:\n{{files}}",
-      "displayMessageFiltered": "Deep review filtered files:\n{{files}}\n\nSkipped {{skipped}} excluded files.",
-      "threadTitle": "Deep review"
-    }
+  "voice": {
+    "stopSpeaking": "Stop speaking",
+    "startListening": "Start voice input",
+    "stopListening": "Stop voice input"
   },
   "sessionFileModificationsBar": {
     "filesCount": "{{count}} files",
