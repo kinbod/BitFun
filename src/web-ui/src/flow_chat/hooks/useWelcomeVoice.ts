@@ -4,8 +4,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { createTtsProvider } from '@/infrastructure/voice/TtsProviderFactory';
 import { configManager } from '@/infrastructure/config/services/ConfigManager';
+import { i18nService } from '@/infrastructure/i18n';
+import { createTtsProvider } from '@/infrastructure/voice/TtsProviderFactory';
 import { createLogger } from '@/shared/utils/logger';
 
 const log = createLogger('WelcomeVoice');
@@ -57,7 +58,7 @@ export function useWelcomeVoice() {
       try {
         const provider = createTtsProvider(cfg.ttsProvider);
         provider.configure(cfg.ttsVoice, cfg.language);
-        await provider.speak('你好，主人');
+        await provider.speak(i18nService.t('app.ttsWelcome', { ns: 'common' }));
         log.debug('Welcome voice spoken');
       } catch (err) {
         log.warn('Welcome voice failed', { err });
