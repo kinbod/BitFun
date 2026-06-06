@@ -6,6 +6,11 @@
 import React, { useMemo, useCallback, useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShortcut } from '@/infrastructure/hooks/useShortcut';
+import {
+  aiExperienceConfigService,
+  type AIExperienceSettings,
+} from '@/infrastructure/config/services/AIExperienceConfigService';
+import { ChatInputPixelPet } from '../ChatInputPixelPet';
 import { FlowChatManager } from '@/flow_chat/services/FlowChatManager';
 import { useSessionModeStore } from '@/app/stores/sessionModeStore';
 import { useTtsPlayback } from '@/flow_chat/hooks/useTtsPlayback';
@@ -194,6 +199,51 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
   const virtualListRef = useRef<VirtualMessageListRef>(null);
   const chatScopeRef = useRef<HTMLDivElement>(null);
   const [historyInitialContentReadyKey, setHistoryInitialContentReadyKey] = useState<string | null>(null);
+  const [companionSettings, setCompanionSettings] = useState<AIExperienceSettings>(() =>
+    aiExperienceConfigService.getSettings()
+  );
+
+  useEffect(() => {
+    void aiExperienceConfigService.getSettingsAsync().then(setCompanionSettings);
+    const unsubscribe = aiExperienceConfigService.addChangeListener((settings) => {
+      setCompanionSettings(settings);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const showCompanionPet = useMemo(
+    () =>
+      companionSettings.enable_agent_companion &&
+      companionSettings.agent_companion_display_mode === 'input' &&
+      Boolean(companionSettings.agent_companion_pet),
+    [companionSettings]
+  );
+
+  const companionMood = useMemo(() => {
+    if (!showCompanionPet) return 'rest' as const;
+    if (!activeSession || activeSession.dialogTurns.length === 0) {
+      return 'rest' as const;
+    }
+    const lastTurn = activeSession.dialogTurns[activeSession.dialogTurns.length - 1];
+    const isProcessing =
+      lastTurn.status === 'processing' ||
+      lastTurn.status === 'finishing' ||
+      lastTurn.status === 'image_analyzing';
+    if (!isProcessing) return 'rest' as const;
+    if (!lastTurn.modelRounds || lastTurn.modelRounds.length === 0) {
+      return 'working' as const;
+    }
+    const lastRound = lastTurn.modelRounds[lastTurn.modelRounds.length - 1];
+    for (let i = lastRound.items.length - 1; i >= 0; i -= 1) {
+      const item = lastRound.items[i];
+      if (item.type === 'tool' && 'toolName' in item && (item as { toolName?: string }).toolName) {
+        return 'waiting' as const;
+      }
+    }
+    return 'working' as const;
+  }, [activeSession, showCompanionPet]);
   const { workspacePath } = useWorkspaceContext();
   const allowUserMessageRollback = !isAcpFlowSession(activeSession);
   const historyState = activeSession?.historyState;
@@ -895,6 +945,18 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
                 </div>
               )}
             </>
+          )}
+          {showCompanionPet && (
+            <div
+              className="modern-flowchat-container__companion-pet"
+              data-testid="modern-flowchat-companion-pet"
+            >
+              <ChatInputPixelPet
+                mood={companionMood}
+                pet={companionSettings.agent_companion_pet}
+                className="modern-flowchat-container__companion-pet-element"
+              />
+            </div>
           )}
         </div>
       </div>
