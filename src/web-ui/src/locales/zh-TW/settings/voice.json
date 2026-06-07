@@ -1,0 +1,30 @@
+{
+  "title": "語音",
+  "subtitle": "語音識別和語音合成設定",
+  "enabled": {
+    "label": "語音輸入/輸出",
+    "description": "啟用語音識別和語音合成"
+  },
+  "sections": {
+    "stt": "語音識別",
+    "tts": "語音合成"
+  },
+  "stt": {
+    "provider": "STT 引擎",
+    "providerDescription": "選擇語音識別引擎",
+    "providers": {
+      "webspeech": "Web Speech API",
+      "fasterWhisper": "Faster Whisper"
+    }
+  },
+  "tts": {
+    "provider": "TTS 引擎",
+    "providerDescription": "選擇語音合成引擎",
+    "providers": {
+      "edge": "Edge TTS",
+      "elevenlabs": "ElevenLabs"
+    },
+    "voice": "語音",
+    "language": "語言"
+  }
+}

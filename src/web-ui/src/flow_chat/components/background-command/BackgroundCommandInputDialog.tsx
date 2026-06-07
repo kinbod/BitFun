@@ -1,11 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Checkbox, Modal, Textarea } from '@/component-library';
 import { useTranslation } from 'react-i18next';
-import type { FlowChatHeaderCommandSummary } from '../modern/FlowChatHeader';
 import './BackgroundCommandInputDialog.scss';
 
+interface BackgroundCommandSummary {
+  execSessionKey: string;
+  execSessionId: number;
+  title: string;
+  command: string;
+  status: 'running' | 'exited' | 'interrupted' | 'killed' | 'pruned' | 'failed';
+  remote?: boolean;
+  tty?: boolean;
+  exitCode?: number;
+  startedAt?: number;
+  elapsedMs?: number;
+  isStopping?: boolean;
+}
+
 interface BackgroundCommandInputDialogProps {
-  command: FlowChatHeaderCommandSummary | null;
+  command: BackgroundCommandSummary | null;
   isSending: boolean;
   onClose: () => void;
   onSend: (request: { chars: string; appendEnter: boolean }) => Promise<void>;

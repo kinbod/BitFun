@@ -15,8 +15,7 @@ import { FlowChatManager } from '@/flow_chat/services/FlowChatManager';
 import { useSessionModeStore } from '@/app/stores/sessionModeStore';
 import { useTtsPlayback } from '@/flow_chat/hooks/useTtsPlayback';
 import { VirtualMessageList, VirtualMessageListRef } from './VirtualMessageList';
-import { FlowChatHeader, type FlowChatHeaderCommandSummary, type FlowChatHeaderTurnSummary } from './FlowChatHeader';
-import { BackgroundCommandInputDialog } from '../background-command/BackgroundCommandInputDialog';
+import { FlowChatHeader, type FlowChatHeaderTurnSummary } from './FlowChatHeader';
 import { WelcomePanel } from '../WelcomePanel';
 import { HistorySessionPlaceholder } from './HistorySessionPlaceholder';
 import { FlowChatContext, FlowChatContextValue } from './FlowChatContext';
@@ -29,16 +28,11 @@ import { useFlowChatToolActions } from './useFlowChatToolActions';
 import { useFlowChatSearch } from './useFlowChatSearch';
 import { useVirtualItems, useActiveSession, useVisibleTurnInfo, type VisibleTurnInfo } from '../../store/modernFlowChatStore';
 import type { FlowChatConfig, FlowToolItem, Session, DialogTurn } from '../../types/flow-chat';
-import {
-  useBackgroundCommandActivityStore,
-  visibleBackgroundCommandActivitiesForSession,
-  type BackgroundCommandActivity,
-} from '../../store/backgroundCommandActivityStore';
 import type { LineRange } from '@/component-library';
-import { isChatPopupActive, subscribeChatPopupChange } from '../chatPopupState';
+import { isChatPopupActive } from '../chatPopupState';
 import { useWorkspaceContext } from '@/infrastructure/contexts/WorkspaceContext';
 import { parsePullRequestUrl } from '@/shared/utils/pullRequestLinks';
-import { createBackgroundCommandOutputTab, createReviewPlatformPullRequestDetailTab } from '@/shared/utils/tabUtils';
+import { createReviewPlatformPullRequestDetailTab } from '@/shared/utils/tabUtils';
 import { isAcpFlowSession } from '../../utils/acpSession';
 import { flowChatStore } from '../../store/FlowChatStore';
 import { openBtwSessionInAuxPane } from '../../services/openBtwSession';
@@ -49,8 +43,6 @@ import {
 } from '../../utils/flowChatTurnScrollPolicy';
 import { isRemoteTraceContext, startupTrace } from '@/shared/utils/startupTrace';
 import { scheduleAfterStartupPaint } from '@/shared/utils/startupTaskScheduling';
-import { agentAPI } from '@/infrastructure/api';
-import { notificationService } from '@/shared/notification-system';
 import {
   HISTORY_SESSION_OPEN_INTENT_EVENT,
   type HistorySessionOpenIntentDetail,
@@ -80,20 +72,6 @@ type BackgroundSubagentSummary = {
   subagentType?: string;
 };
 
-type BackgroundCommandSummary = {
-  execSessionKey: string;
-  execSessionId: number;
-  title: string;
-  command: string;
-  status: 'running' | 'exited' | 'interrupted' | 'killed' | 'pruned' | 'failed';
-  remote?: boolean;
-  tty?: boolean;
-  exitCode?: number;
-  startedAt?: number;
-  elapsedMs?: number;
-  isStopping?: boolean;
-};
-
 const LATEST_TURN_AUTO_PIN_MAX_ATTEMPTS = 8;
 const HISTORY_INITIAL_CONTENT_PAINT_MAX_ATTEMPTS = 120;
 const MOCK_BACKGROUND_ACTIVITIES_STORAGE_KEY = 'bitfun.flowChat.mockBackgroundActivities';
@@ -110,54 +88,6 @@ const MOCK_BACKGROUND_SUBAGENTS: BackgroundSubagentSummary[] = [
     title: 'Preparing migration notes for command lifecycle events',
     agentType: 'GeneralPurpose',
     status: 'finishing',
-  },
-];
-
-const MOCK_BACKGROUND_COMMANDS: BackgroundCommandSummary[] = [
-  {
-    execSessionKey: 'mock:interactive-input',
-    execSessionId: 4216,
-    title: 'node interactive-test.js',
-    command: 'node interactive-test.js',
-    status: 'running',
-    remote: false,
-    tty: true,
-    startedAt: Date.now() - 24_000,
-    elapsedMs: 24_000,
-  },
-  {
-    execSessionKey: 'mock:test',
-    execSessionId: 4217,
-    title: 'cargo test -p terminal-core lifecycle_reports_running_and_natural_exit',
-    command: 'cargo test -p terminal-core lifecycle_reports_running_and_natural_exit',
-    status: 'running',
-    remote: false,
-    tty: true,
-    startedAt: Date.now() - 42_000,
-    elapsedMs: 42_000,
-  },
-  {
-    execSessionKey: 'mock:build',
-    execSessionId: 4218,
-    title: 'pnpm run desktop:dev -- --profile heavy-ui-check',
-    command: 'pnpm run desktop:dev -- --profile heavy-ui-check',
-    status: 'running',
-    remote: true,
-    tty: true,
-    startedAt: Date.now() - 96_000,
-    elapsedMs: 96_000,
-  },
-  {
-    execSessionKey: 'mock:finished',
-    execSessionId: 4219,
-    title: 'node scripts/i18n-audit.mjs',
-    command: 'node scripts/i18n-audit.mjs',
-    status: 'exited',
-    remote: false,
-    tty: false,
-    exitCode: 0,
-    startedAt: Date.now() - 14_000,
-    elapsedMs: 13_400,
   },
 ];
 
@@ -271,30 +201,6 @@ function collectRunningBackgroundSubagents(parentSessionId: string | undefined):
   });
 }
 
-function commandTitle(command: string): string {
-  const trimmed = command.trim();
-  if (!trimmed) {
-    return '';
-  }
-  return trimmed.length > 96 ? `${trimmed.slice(0, 96)}...` : trimmed;
-}
-
-function backgroundCommandSummaryFromActivity(activity: BackgroundCommandActivity): BackgroundCommandSummary {
-  const endedAt = activity.endedAtMs;
-  return {
-    execSessionKey: activity.execSessionKey,
-    execSessionId: activity.execSessionId,
-    title: commandTitle(activity.command),
-    command: activity.command,
-    status: activity.status,
-    remote: activity.remote,
-    tty: activity.tty,
-    exitCode: activity.exitCode,
-    startedAt: activity.startedAtMs,
-    elapsedMs: (activity.status === 'running' ? Date.now() : endedAt ?? Date.now()) - activity.startedAtMs,
-  };
-}
-
 export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = ({
   className = '',
   config,
@@ -313,18 +219,8 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
   // Track whether a slash-command or @-mention popup is open in ChatInput.
   // When a popup is active, the global Escape shortcut is disabled so the
   // popup can be closed with Escape instead of cancelling the current task.
-  const [chatPopupActive, setChatPopupActive] = useState(() => isChatPopupActive());
-  const backgroundCommandActivities = useBackgroundCommandActivityStore(state => state.activities);
-
-  useEffect(() => {
-    return subscribeChatPopupChange(() => {
-      setChatPopupActive(isChatPopupActive());
-    });
-  }, []);
+  const [chatPopupActive] = useState(() => isChatPopupActive());
   const [backgroundSubagents, setBackgroundSubagents] = useState<BackgroundSubagentSummary[]>([]);
-  const [stoppingBackgroundCommandIds, setStoppingBackgroundCommandIds] = useState<Set<string>>(() => new Set());
-  const [backgroundCommandInputTarget, setBackgroundCommandInputTarget] = useState<FlowChatHeaderCommandSummary | null>(null);
-  const [isSendingBackgroundCommandInput, setIsSendingBackgroundCommandInput] = useState(false);
   const autoPinnedTurnKeyRef = useRef<string | null>(null);
   const releasedHistoryCompletionKeyRef = useRef<string | null>(null);
   const virtualListRef = useRef<VirtualMessageListRef>(null);
@@ -399,7 +295,7 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
     onCollapseGroup: handleCollapseGroup,
   } = useExploreGroupState(virtualItems);
   const { handleToolConfirm, handleToolReject } = useFlowChatToolActions();
-  const { isSpeaking: isTtsSpeaking, currentTextItemId: speakingTextItemId, stop: stopTts } = useTtsPlayback();
+  const { currentTextItemId: speakingTextItemId } = useTtsPlayback();
 
   const { handleFileViewRequest } = useFlowChatFileActions({
     workspacePath,
@@ -601,11 +497,11 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
     )
       ? `${activeSession.sessionId}:${latestTurnId}`
       : null;
-  const shouldBlockHistoryInitialContentInteraction =
+  const showHistoryInitialContentOverlay =
     historyInitialContentKey !== null &&
     historyInitialContentReadyKey !== historyInitialContentKey;
   const shouldBlockHistoryTransitionInteraction =
-    shouldBlockHistoryInitialContentInteraction ||
+    showHistoryInitialContentOverlay ||
     showHistoryOpenIntentOverlay;
   const showFailedHistoryPlaceholder =
     showHistoryPlaceholder && historyState === 'failed';
@@ -1034,61 +930,6 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
     };
   }, [activeSession?.sessionId]);
 
-  useEffect(() => {
-    const agentSessionId = activeSession?.sessionId;
-    if (!agentSessionId) {
-      return;
-    }
-
-    let cancelled = false;
-    void agentAPI.listBackgroundCommandActivities({ agentSessionId })
-      .then((response) => {
-        if (!cancelled) {
-          useBackgroundCommandActivityStore
-            .getState()
-            .hydrateActivities(agentSessionId, response.activities);
-        }
-      })
-      .catch(() => {
-        /* Snapshot recovery is best-effort; live events remain authoritative. */
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeSession?.sessionId]);
-
-  const backgroundCommands = useMemo(
-    () => visibleBackgroundCommandActivitiesForSession(
-      backgroundCommandActivities,
-      activeSession?.sessionId,
-    ).map(backgroundCommandSummaryFromActivity),
-    [activeSession?.sessionId, backgroundCommandActivities],
-  );
-
-  useEffect(() => {
-    if (stoppingBackgroundCommandIds.size === 0) {
-      return;
-    }
-
-    const runningCommandIds = new Set(
-      backgroundCommands
-        .filter(command => command.status === 'running')
-        .map(command => command.execSessionKey),
-    );
-    if (import.meta.env.DEV && shouldShowMockBackgroundActivities()) {
-      for (const command of MOCK_BACKGROUND_COMMANDS) {
-        if (command.status === 'running') {
-          runningCommandIds.add(command.execSessionKey);
-        }
-      }
-    }
-    setStoppingBackgroundCommandIds((previous) => {
-      const next = new Set([...previous].filter(commandKey => runningCommandIds.has(commandKey)));
-      return next.size === previous.size ? previous : next;
-    });
-  }, [backgroundCommands, stoppingBackgroundCommandIds.size]);
-
   const handleOpenBackgroundSubagent = useCallback((childSessionId: string) => {
     const subagent = backgroundSubagents.find(item => item.sessionId === childSessionId);
     if (!subagent || !activeSession?.sessionId) {
@@ -1110,121 +951,12 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
     });
   }, [activeSession, backgroundSubagents]);
 
-  const handleOpenBackgroundCommandOutput = useCallback((command: FlowChatHeaderCommandSummary) => {
-    createBackgroundCommandOutputTab({
-      execSessionKey: command.execSessionKey,
-      execSessionId: command.execSessionId,
-      remote: command.remote === true,
-      title: command.title || t('backgroundCommandOutput.title'),
-      command: command.command,
-      mockKind: import.meta.env.DEV && command.execSessionKey.startsWith('mock:')
-        ? command.execSessionKey.slice('mock:'.length)
-        : undefined,
-    });
-  }, [t]);
-
-  const handleRequestBackgroundCommandInput = useCallback((command: FlowChatHeaderCommandSummary) => {
-    if (command.status !== 'running' || command.tty !== true) {
-      return;
-    }
-    setBackgroundCommandInputTarget(command);
-  }, []);
-
-  const handleCloseBackgroundCommandInput = useCallback(() => {
-    if (isSendingBackgroundCommandInput) {
-      return;
-    }
-    setBackgroundCommandInputTarget(null);
-  }, [isSendingBackgroundCommandInput]);
-
-  const handleSendBackgroundCommandInput = useCallback(async (
-    request: { chars: string; appendEnter: boolean },
-  ) => {
-    const command = backgroundCommandInputTarget;
-    if (!command) {
-      return;
-    }
-
-    setIsSendingBackgroundCommandInput(true);
-    try {
-      if (import.meta.env.DEV && command.execSessionKey.startsWith('mock:')) {
-        await new Promise<void>((resolve) => window.setTimeout(resolve, 350));
-      } else {
-        await agentAPI.sendBackgroundCommandInput({
-          execSessionId: command.execSessionId,
-          remote: command.remote === true,
-          chars: request.chars,
-          appendEnter: request.appendEnter,
-        });
-      }
-      setBackgroundCommandInputTarget(null);
-      notificationService.success(
-        t('backgroundCommandInput.sendSucceeded'),
-        { duration: 2500 },
-      );
-    } catch (_error) {
-      notificationService.error(
-        t('backgroundCommandInput.sendFailed'),
-        { duration: 5000 },
-      );
-    } finally {
-      setIsSendingBackgroundCommandInput(false);
-    }
-  }, [backgroundCommandInputTarget, t]);
-
-  const handleStopBackgroundCommand = useCallback(async (command: FlowChatHeaderCommandSummary) => {
-    if (command.status !== 'running') {
-      return;
-    }
-
-    setStoppingBackgroundCommandIds((previous) => new Set(previous).add(command.execSessionKey));
-
-    if (import.meta.env.DEV && command.execSessionKey.startsWith('mock:')) {
-      window.setTimeout(() => {
-        setStoppingBackgroundCommandIds((previous) => {
-          const next = new Set(previous);
-          next.delete(command.execSessionKey);
-          return next;
-        });
-      }, 1200);
-      return;
-    }
-
-    try {
-      await agentAPI.controlBackgroundCommand({
-        execSessionId: command.execSessionId,
-        action: 'interrupt',
-        remote: command.remote === true,
-      });
-    } catch (_error) {
-      setStoppingBackgroundCommandIds((previous) => {
-        const next = new Set(previous);
-        next.delete(command.execSessionKey);
-        return next;
-      });
-      notificationService.error(
-        t('flowChatHeader.backgroundCommandStopFailed'),
-        { duration: 5000 },
-      );
-    }
-  }, [t]);
-
   const showMockBackgroundActivities = shouldShowMockBackgroundActivities();
   const headerBackgroundSubagents = useMemo(
     () => showMockBackgroundActivities
       ? [...backgroundSubagents, ...MOCK_BACKGROUND_SUBAGENTS]
       : backgroundSubagents,
     [backgroundSubagents, showMockBackgroundActivities],
-  );
-  const headerBackgroundCommands = useMemo(
-    () => (showMockBackgroundActivities
-      ? [...backgroundCommands, ...MOCK_BACKGROUND_COMMANDS]
-      : backgroundCommands
-    ).map(command => ({
-      ...command,
-      isStopping: stoppingBackgroundCommandIds.has(command.execSessionKey),
-    })),
-    [backgroundCommands, showMockBackgroundActivities, stoppingBackgroundCommandIds],
   );
 
   useShortcut(
@@ -1304,20 +1036,7 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
           onSearchClose={clearSearch}
           searchOpenRequest={searchOpenRequest}
           backgroundSubagents={headerBackgroundSubagents}
-          backgroundCommands={headerBackgroundCommands}
           onOpenBackgroundSubagent={handleOpenBackgroundSubagent}
-          isSpeaking={isTtsSpeaking}
-          onStopSpeaking={stopTts}
-          onOpenBackgroundCommandOutput={handleOpenBackgroundCommandOutput}
-          onRequestBackgroundCommandInput={handleRequestBackgroundCommandInput}
-          onStopBackgroundCommand={handleStopBackgroundCommand}
-        />
-
-        <BackgroundCommandInputDialog
-          command={backgroundCommandInputTarget}
-          isSending={isSendingBackgroundCommandInput}
-          onClose={handleCloseBackgroundCommandInput}
-          onSend={handleSendBackgroundCommandInput}
         />
 
         <div
@@ -1395,56 +1114,6 @@ export const ModernFlowChatContainer: React.FC<ModernFlowChatContainerProps> = (
               />
             </div>
           )}
-          <>
-            {showFailedHistoryPlaceholder ? (
-              <HistorySessionPlaceholder
-                state="failed"
-                onRetry={handleRetryHistoryLoad}
-              />
-            ) : virtualItems.length === 0 ? (
-              showHistoryLoadingLayer ? null : (
-                <WelcomePanel
-                  key={activeSession?.sessionId ?? 'welcome'}
-                  sessionMode={activeSession?.mode}
-                  workspacePath={activeSession?.workspacePath}
-                  onQuickAction={(command) => {
-                    window.dispatchEvent(new CustomEvent('fill-chat-input', {
-                      detail: { message: command }
-                    }));
-                  }}
-                />
-              )
-            ) : (
-              <>
-                <VirtualMessageList
-                  ref={virtualListRef}
-                />
-              </>
-            )}
-            {showHistoryLoadingLayer && (
-              <div
-                className="modern-flowchat-container__history-overlay"
-                role="status"
-                aria-label={t('historyState.loadingTitle')}
-              >
-                <HistorySessionPlaceholder
-                  state={historyState === 'metadata-only' ? 'metadata-only' : 'hydrating'}
-                />
-              </div>
-            )}
-            {showHistoryOpenIntentOverlay && (
-              <div
-                className="modern-flowchat-container__history-open-intent-shield"
-                role="status"
-                aria-label={t('historyState.loadingTitle')}
-              >
-                <span
-                  className="modern-flowchat-container__history-open-intent-spinner"
-                  aria-hidden="true"
-                />
-              </div>
-            )}
-          </>
         </div>
       </div>
     </FlowChatContext.Provider>

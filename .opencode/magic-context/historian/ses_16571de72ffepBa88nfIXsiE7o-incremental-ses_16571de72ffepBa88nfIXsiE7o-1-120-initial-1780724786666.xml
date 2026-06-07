@@ -1,0 +1,33 @@
+<output>
+<compartments>
+<compartment start="1" end="13" title="AGENTS.md targeted improvements">
+Verified the existing AGENTS.md was already well-structured with all referenced paths intact. Made four targeted improvements: added E2E test commands (e2e:test, e2e:test:smoke, e2e:test:chat, e2e:test:l0, e2e:test:l1) to Common commands, added CLI commands (cli:check, cli:test), added `desktop:dev:raw` (raw Tauri dev with CI=true, for OpenSSL-bootstrap opt-out), and corrected the Rust verification row to use `cargo check --workspace --exclude bitfun-cli` for CI-equivalent coverage.
+</compartment>
+<compartment start="14" end="67" title="Desktop pet not showing - root cause analysis and resolution">
+User reported the floating desktop pet stopped showing. Verified config: enable_agent_companion=true, agent_companion_display_mode='desktop'. Investigated show/hide Rust commands in src/apps/desktop/src/theme.rs, AGENT_COMPANION_WINDOW_LABEL lifecycle, app_url construction (dev: http://localhost:1422/?bitfunWindow=agent-companion), and the syncAgentCompanionDesktopWindow listener in App.tsx. Traced several potential issues: window.destroy() race in hide/show reuse path, dev server not running, off-screen positioning, webview process crash. User then confirmed the pet is now displaying normally.
+</compartment>
+<compartment start="68" end="104" title="Input mode pet not showing - ToolbarMode-only rendering discovered">
+User reported that switching display_mode to "输入框内" hides the pet. Investigation showed that "input" mode only renders ChatInputPixelPet in src/web-ui/src/flow_chat/components/toolbar-mode/ToolbarMode.tsx (the floating window mode window), not in the regular ChatInput. User then said entering 悬浮窗模式 (toolbar mode) also did not show the pet. Further investigation of ToolbarMode.tsx:64-70 found that the component loads AI experience settings once on mount via getSettingsAsync() and does NOT subscribe to settings changes (no addChangeListener call), so any settings change made while the component is mounted will not propagate.
+</compartment>
+<compartment start="105" end="120" title="User clarifies expected "input" mode behavior - feature gap confirmed">
+User clarified that the i18n description "在会话输入框收起时显示" should mean the pet renders in the main chat area's bottom-left (next to the input box), not in the standalone 悬浮窗模式 floating window. Confirmed via grep/read of src/web-ui/src/flow_chat/components/ChatInput/ that bitfun-chat-input__container at ChatInput.tsx:3004 has no pet rendering path - ChatInputPixelPet is only used in ToolbarMode.tsx, SessionConfig.tsx (settings preview), and AgentCompanionDesktopPet.tsx (desktop window). The "input" mode rendering in regular ChatInput is a missing feature, not a bug. Offered to implement the bottom-left rendering if user wants.
+</compartment>
+</compartments>
+<facts>
+<KNOWN_ISSUES>
+* Agent companion `input` display mode only renders the pet inside the standalone 悬浮窗模式 floating window (src/web-ui/src/flow_chat/components/toolbar-mode/ToolbarMode.tsx). The regular ChatInput has no pet render path, contradicting the i18n description "在会话输入框收起时显示" (zh-CN/settings/session-config.json:23).
+* ToolbarMode.tsx loads AI experience settings once on mount via aiExperienceConfigService.getSettingsAsync() and does not subscribe to settings change events. Settings changes made while the component is mounted will not reflect in the toolbar until it remounts.
+</KNOWN_ISSUES>
+<ARCHITECTURE_DECISIONS>
+* Agent companion has three display surfaces: desktop window (separate Tauri webview created by show_agent_companion_desktop_pet in src/apps/desktop/src/theme.rs), 悬浮窗模式 (ToolbarMode component, conditional on isToolbarMode in AppLayout.tsx:633), and a settings preview in SessionConfig. Pet assets live under src/web-ui/public/agent-companion-pets/ and are served at /agent-companion-pets/...
+</ARCHITECTURE_DECISIONS>
+</facts>
+<user_observations>
+* User communicates in Chinese, prefers terse direct status updates (e.g. "继续", config key=value reports) rather than verbose explanations.
+* User is a power user who can read config keys and modes directly and is comfortable with technical back-and-forth about Tauri/webview internals.
+</user_observations>
+<meta>
+<messages_processed>1-120</messages_processed>
+<unprocessed_from></unprocessed_from>
+</meta>
+</output>

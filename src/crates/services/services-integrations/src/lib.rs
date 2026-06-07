@@ -24,9 +24,6 @@ pub mod remote_connect;
 #[cfg(feature = "remote-ssh")]
 pub mod remote_ssh;
 
-#[cfg(feature = "voice")]
-pub mod voice;
-
 #[cfg(all(windows, feature = "git"))]
 #[link(name = "advapi32")]
 unsafe extern "system" {}
