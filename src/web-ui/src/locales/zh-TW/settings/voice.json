@@ -10,6 +10,10 @@
     "tts": "語音合成"
   },
   "stt": {
+    "enabled": {
+      "label": "語音識別",
+      "description": "啟用語音轉文字（語音輸入）"
+    },
     "provider": "STT 引擎",
     "providerDescription": "選擇語音識別引擎",
     "providers": {
@@ -18,6 +22,10 @@
     }
   },
   "tts": {
+    "enabled": {
+      "label": "語音合成",
+      "description": "啟用文字轉語音（語音輸出）"
+    },
     "provider": "TTS 引擎",
     "providerDescription": "選擇語音合成引擎",
     "providers": {

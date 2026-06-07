@@ -10,6 +10,10 @@
     "tts": "Text-to-Speech"
   },
   "stt": {
+    "enabled": {
+      "label": "Speech Recognition",
+      "description": "Enable speech-to-text (voice input)"
+    },
     "provider": "STT Provider",
     "providerDescription": "Select the speech recognition engine",
     "providers": {
@@ -18,6 +22,10 @@
     }
   },
   "tts": {
+    "enabled": {
+      "label": "Text-to-Speech",
+      "description": "Enable text-to-speech synthesis (voice output)"
+    },
     "provider": "TTS Provider",
     "providerDescription": "Select the text-to-speech engine",
     "providers": {
