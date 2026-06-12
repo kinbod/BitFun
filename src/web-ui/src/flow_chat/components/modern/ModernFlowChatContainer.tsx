@@ -1446,7 +1446,7 @@ if (item.type === 'tool' && item.toolName) {
                 key={activeSession?.sessionId ?? 'virtual-message-list'}
                 ref={virtualListRef}
               />
-              {showHistoryInitialContentOverlay && (
+              {shouldBlockHistoryInitialContentInteraction && (
                 <div className="modern-flowchat-container__history-overlay">
                   <HistorySessionPlaceholder state="hydrating" />
                 </div>

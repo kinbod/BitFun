@@ -87,6 +87,8 @@ export interface FlowChatHeaderProps {
   backgroundCommands?: FlowChatHeaderCommandSummary[];
   /** Open a background subagent in the right-side panel. */
   onOpenBackgroundSubagent?: (sessionId: string) => void;
+  /** Whether TTS is currently speaking. */
+  isSpeaking?: boolean;
   /** Called when user clicks to stop TTS playback. */
   onStopSpeaking?: () => void;
   /** Open a read-only output panel for a background command. */
@@ -118,6 +120,7 @@ export const FlowChatHeader: React.FC<FlowChatHeaderProps> = ({
   onSearchClose,
   searchOpenRequest = 0,
   backgroundSubagents = [],
+  backgroundCommands = [],
   onOpenBackgroundSubagent,
   isSpeaking = false,
   onStopSpeaking,
